@@ -22,13 +22,22 @@ struct ContentView: View {
                 // Iterate over the filtered list
                 ForEach(filteredInventory) { item in
                     HStack {
+                        // Add image preview if imageData exists
+                        if let imageData = item.imageData, let uiImage = UIImage(data: imageData) {
+                            Image(uiImage: uiImage)
+                                .resizable()
+                                .scaledToFill() // Use Fill to ensure the frame is filled
+                                .frame(width: 50, height: 50) // Small square frame
+                                .clipShape(RoundedRectangle(cornerRadius: 5)) // Optional: round corners
+                                .padding(.trailing, 5) // Add some space between image and text
+                        }
+
                         VStack(alignment: .leading) {
                             Text(item.name).font(.headline)
                             Text("Quantity: \(item.quantity)")
                                 .font(.subheadline)
                                 .foregroundColor(.gray)
-                            // Corrected line: Remove 'if let'
-                            if !item.category.isEmpty { // Directly check the non-optional String
+                            if !item.category.isEmpty {
                                 Text("Category: \(item.category)")
                                     .font(.caption)
                                     .foregroundColor(.blue)
@@ -39,7 +48,7 @@ struct ContentView: View {
                                     .foregroundColor(.orange)
                             }
                         }
-                        Spacer() // Pushes content to the left
+                        Spacer()
                     }
                     .contentShape(Rectangle())
                     .onTapGesture {
@@ -50,18 +59,10 @@ struct ContentView: View {
                 .onDelete { indexSet in
                     // Need to map the indexSet from the filtered list back to the original list
                     let itemsToDelete = indexSet.map { filteredInventory[$0] }
-                    if let firstItemToDelete = itemsToDelete.first,
-                       let originalIndex = inventoryManager.inventory.firstIndex(where: { $0.id == firstItemToDelete.id }) {
-                        inventoryManager.removeItem(at: IndexSet(integer: originalIndex))
-                    }
-                    // Note: This simple onDelete mapping works best if the filtered list maintains
-                    // a somewhat stable order relative to the original. Complex filtering might
-                    // require a more robust deletion mechanism (e.g., deleting by item ID).
-                    // For simplicity with basic name filtering, this often suffices.
-                    // A more robust way:
-                    // let idsToDelete = indexSet.map { filteredInventory[$0].id }
-                    // inventoryManager.inventory.removeAll { idsToDelete.contains($0.id) }
-                    // inventoryManager.saveInventory() // Assuming removeAll doesn't trigger save
+                    // Use robust deletion by ID
+                    let idsToDelete = itemsToDelete.map { $0.id }
+                    inventoryManager.inventory.removeAll { idsToDelete.contains($0.id) }
+                    // inventoryManager.saveInventory() // Called by @Published didSet
                 }
             }
             .navigationTitle("Grocery Inventory")
@@ -83,6 +84,7 @@ struct ContentView: View {
                 AddItemView(inventoryManager: inventoryManager)
             }
             .sheet(item: $itemToEdit) { item in
+                 // IMPORTANT: Ensure EditItemView can handle imageData
                  EditItemView(inventoryManager: inventoryManager, itemToEdit: item)
             }
         }
