@@ -1,23 +1,39 @@
 import SwiftUI
 
 struct AddItemView: View {
-    @ObservedObject var inventoryManager: InventoryManager // Get the manager instance
-    @Environment(\.dismiss) var dismiss // To close the sheet
+    @ObservedObject var inventoryManager: InventoryManager
+    @Environment(\.dismiss) var dismiss
 
-    // State variables to hold input
     @State private var itemName: String = ""
-    @State private var itemQuantity: String = "" // Use String for TextField, convert later
-    @State private var itemCategory: String = ""
-    @State private var expirationDate: Date = Date() // Default to today
+    @State private var itemQuantity: String = ""
+    @State private var itemCategory: String = "" // Still holds the input
+    @State private var expirationDate: Date = Date()
     @State private var hasExpiration: Bool = false
+
+    // Example predefined categories (Optional: Use for a Picker)
+    // let categories = ["Produce", "Dairy", "Bakery", "Pantry", "Meat/Seafood", "Frozen", "Beverages", "Snacks", "Breakfast", "Other"]
+
+    // Define the categories
+    let categories = ["Produce", "Dairy & Alternatives", "Bakery & Bread", "Meat & Seafood", "Pantry Staples", "Breakfast", "Frozen Foods", "Snacks", "Beverages", "Other"]
 
     var body: some View {
         NavigationView {
             Form {
                 TextField("Item Name", text: $itemName)
                 TextField("Quantity", text: $itemQuantity)
-                    .keyboardType(.numberPad) // Show number pad
-                TextField("Category (Optional)", text: $itemCategory)
+                    .keyboardType(.numberPad)
+
+                Picker("Category", selection: $itemCategory) {
+                    ForEach(categories, id: \.self) { category in
+                        Text(category).tag(category)
+                    }
+                }
+                .pickerStyle(.menu) // Explicitly set the style
+                .onAppear {
+                    if itemCategory.isEmpty && !categories.isEmpty {
+                        itemCategory = categories[0] // Default to first category
+                    }
+                }
 
                 Toggle("Has Expiration Date?", isOn: $hasExpiration.animation())
 
@@ -29,26 +45,25 @@ struct AddItemView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Cancel") {
-                        dismiss() // Close the sheet
+                        dismiss()
                     }
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Save") {
-                        // Convert quantity string to Int
                         if let quantity = Int(itemQuantity) {
                             inventoryManager.addItem(
                                 name: itemName,
                                 quantity: quantity,
                                 expirationDate: hasExpiration ? expirationDate : nil,
-                                category: itemCategory.isEmpty ? nil : itemCategory
+                                category: itemCategory // Pass the category
                             )
-                            dismiss() // Close the sheet after saving
+                            dismiss()
                         } else {
-                            // Handle invalid quantity input (e.g., show an alert)
                             print("Invalid quantity")
                         }
                     }
-                    .disabled(itemName.isEmpty || itemQuantity.isEmpty) // Disable save if fields are empty
+                    // Disable save if name, quantity, OR category is empty
+                    .disabled(itemName.isEmpty || itemQuantity.isEmpty || itemCategory.isEmpty)
                 }
             }
         }

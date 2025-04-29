@@ -1,26 +1,34 @@
 import Foundation
-import Combine // Useful for updating UI when data changes
+import Combine
 
 class InventoryManager: ObservableObject {
-    @Published var inventory: [GroceryItem] = [] // @Published automatically notifies views of changes
+    @Published var inventory: [GroceryItem] = []
 
     init() {
-        // Load inventory from storage if available (e.g., UserDefaults, Core Data, File)
         loadInventory()
+        // Optional: Add migration logic here if you have existing saved data
+        // without categories. You might need to assign a default category
+        // like "Uncategorized" to old items upon loading.
     }
 
-    // Add a new item
-    func addItem(name: String, quantity: Int, expirationDate: Date? = nil, category: String? = nil) {
+    // Add a new item - category is now required
+    func addItem(name: String, quantity: Int, expirationDate: Date? = nil, category: String) { // Added category parameter
         let newItem = GroceryItem(name: name, quantity: quantity, expirationDate: expirationDate, category: category)
         inventory.append(newItem)
-        saveInventory() // Save after adding
+        saveInventory()
     }
 
-    // Update an existing item
+    // Update an existing item - No signature change needed, but ensure the passed 'item' has a category
     func updateItem(item: GroceryItem) {
+        // Ensure the item being passed has a non-empty category before saving
+        guard !item.category.isEmpty else {
+             print("Error: Attempted to update item with an empty category.")
+             // Optionally handle this error, e.g., assign a default or prevent saving
+             return
+        }
         if let index = inventory.firstIndex(where: { $0.id == item.id }) {
             inventory[index] = item
-            saveInventory() // Save after updating
+            saveInventory()
         }
     }
 
@@ -41,9 +49,16 @@ class InventoryManager: ObservableObject {
 
     private func loadInventory() {
         if let savedItems = UserDefaults.standard.data(forKey: "groceryInventory") {
-            if let decodedItems = try? JSONDecoder().decode([GroceryItem].self, from: savedItems) {
+            let decoder = JSONDecoder()
+            // Attempt to decode. If it fails (e.g., due to missing category in old data),
+            // it will fall through to setting an empty array.
+            if let decodedItems = try? decoder.decode([GroceryItem].self, from: savedItems) {
                 inventory = decodedItems
+                print("Inventory loaded successfully.")
                 return
+            } else {
+                 print("Failed to decode inventory. Starting fresh or data format mismatch (e.g., missing category).")
+                 // Handle migration or inform user if necessary
             }
         }
         // If loading fails or no data exists, start with an empty array
