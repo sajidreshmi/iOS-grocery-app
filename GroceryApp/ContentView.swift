@@ -27,8 +27,9 @@ struct ContentView: View {
                             Text("Quantity: \(item.quantity)")
                                 .font(.subheadline)
                                 .foregroundColor(.gray)
-                            if let category = item.category, !category.isEmpty {
-                                Text("Category: \(category)")
+                            // Corrected line: Remove 'if let'
+                            if !item.category.isEmpty { // Directly check the non-optional String
+                                Text("Category: \(item.category)")
                                     .font(.caption)
                                     .foregroundColor(.blue)
                             }
