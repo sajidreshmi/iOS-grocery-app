@@ -4,22 +4,33 @@ struct ContentView: View {
     @StateObject private var inventoryManager = InventoryManager()
     @State private var showingAddItemSheet = false
     @State private var itemToEdit: GroceryItem?
-    @State private var searchText = "" // State variable for the search text
+    @State private var searchText = "" // Add state for search text
 
-    // Computed property to filter inventory based on search text
+    // Computed property for filtering
     var filteredInventory: [GroceryItem] {
         if searchText.isEmpty {
-            return inventoryManager.inventory // Return all items if search is empty
+            return inventoryManager.inventory
         } else {
-            // Filter items whose name contains the search text (case-insensitive)
             return inventoryManager.inventory.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
+        }
+    }
+
+    // Updated helper function to truncate description and remove newlines
+    private func singleLineDescription(_ text: String?, maxLength: Int = 50) -> String? {
+        guard var text = text, !text.isEmpty else { return nil }
+        // Remove newline characters
+        text = text.replacingOccurrences(of: "\n", with: " ") // Replace newlines with spaces
+        if text.count > maxLength {
+            return String(text.prefix(maxLength)) + "..."
+        } else {
+            return text
         }
     }
 
     var body: some View {
         NavigationView {
             List {
-                // Iterate over the filtered list
+                // Use filteredInventory here
                 ForEach(filteredInventory) { item in
                     HStack {
                         // Add image preview if imageData exists
@@ -34,10 +45,18 @@ struct ContentView: View {
 
                         VStack(alignment: .leading) {
                             Text(item.name).font(.headline)
+                            // Use the updated helper function
+                            if let description = singleLineDescription(item.description) {
+                                Text(description)
+                                    .font(.subheadline)
+                                    .foregroundColor(.gray)
+                                    .lineLimit(1) // Explicitly limit to one line
+                            }
                             Text("Quantity: \(item.quantity)")
                                 .font(.subheadline)
                                 .foregroundColor(.gray)
-                            if !item.category.isEmpty {
+                            // Use item.category directly
+                            if !item.category.isEmpty && item.category != "-- Select Category --" { // Check against placeholder
                                 Text("Category: \(item.category)")
                                     .font(.caption)
                                     .foregroundColor(.blue)
@@ -55,18 +74,15 @@ struct ContentView: View {
                         itemToEdit = item
                     }
                 }
-                // Use the filtered list for deletion as well
                 .onDelete { indexSet in
-                    // Need to map the indexSet from the filtered list back to the original list
+                    // Adjust deletion logic for filtered list
                     let itemsToDelete = indexSet.map { filteredInventory[$0] }
-                    // Use robust deletion by ID
                     let idsToDelete = itemsToDelete.map { $0.id }
                     inventoryManager.inventory.removeAll { idsToDelete.contains($0.id) }
-                    // inventoryManager.saveInventory() // Called by @Published didSet
                 }
             }
             .navigationTitle("Grocery Inventory")
-            // Add the searchable modifier here
+            // Add searchable modifier
             .searchable(text: $searchText, prompt: "Search Groceries")
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
@@ -84,12 +100,9 @@ struct ContentView: View {
                 AddItemView(inventoryManager: inventoryManager)
             }
             .sheet(item: $itemToEdit) { item in
-                 // IMPORTANT: Ensure EditItemView can handle imageData
                  EditItemView(inventoryManager: inventoryManager, itemToEdit: item)
             }
         }
-        // It's often better to apply searchable to the view inside NavigationView
-        // if you encounter layout issues, but applying it to List is common too.
     }
 }
 

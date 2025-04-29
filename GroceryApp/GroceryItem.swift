@@ -8,16 +8,18 @@ struct GroceryItem: Identifiable, Codable {
     var quantity: Int
     var expirationDate: Date?
     var category: String
-    var imageData: Data? // Add this property
+    var imageData: Data?
+    var description: String? // Add this property
 
     // Adjust initializer if you have a custom one
-    init(id: UUID = UUID(), name: String, quantity: Int, expirationDate: Date? = nil, category: String, imageData: Data? = nil) {
+    init(id: UUID = UUID(), name: String, quantity: Int, expirationDate: Date? = nil, category: String, imageData: Data? = nil, description: String? = nil) {
         self.id = id
         self.name = name
         self.quantity = quantity
         self.expirationDate = expirationDate
         self.category = category
-        self.imageData = imageData // Initialize the new property
+        self.imageData = imageData
+        self.description = description // Initialize the new property
     }
 
     // Add a computed property to easily get a UIImage (optional but helpful)

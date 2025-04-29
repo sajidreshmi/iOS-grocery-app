@@ -6,41 +6,38 @@ struct EditItemView: View {
 
     @State private var editableItem: GroceryItem
     @State private var itemQuantityString: String
+    @State private var itemDescriptionString: String
     @State private var hasExpiration: Bool
+    @State private var expirationDate: Date // Keep track of date separately
 
-    // Add state for image picker
+    // Image Picker States
     @State private var showingImagePicker = false
-    @State private var inputImage: UIImage? // To hold the UIImage
-    // Add state for choosing the source
+    @State private var inputImage: UIImage?
     @State private var showingSourcePicker = false
-    @State private var sourceType: UIImagePickerController.SourceType = .camera // Default source
+    @State private var sourceType: UIImagePickerController.SourceType = .camera
 
-    // Define the same categories (ensure this matches AddItemView if needed)
-    let categories = ["-- Select Category --", "Dairy", "Bakery", "Meat & Seafood", "Breakfast", "Frozen Foods", "Snacks", "Beverages","Spices & Cereals","Other"] // Make sure this list is consistent
+    // State for description expansion
+    @State private var isDescriptionExpanded: Bool = false
+
+    let categories = ["-- Select Category --", "Dairy", "Bakery", "Meat & Seafood", "Breakfast", "Frozen Foods", "Snacks", "Beverages","Spices & Cereals","Other"]
 
     init(inventoryManager: InventoryManager, itemToEdit: GroceryItem) {
         self.inventoryManager = inventoryManager
         _editableItem = State(initialValue: itemToEdit)
         _itemQuantityString = State(initialValue: "\(itemToEdit.quantity)")
+        _itemDescriptionString = State(initialValue: itemToEdit.description ?? "")
         _hasExpiration = State(initialValue: itemToEdit.expirationDate != nil)
+        _expirationDate = State(initialValue: itemToEdit.expirationDate ?? Date()) // Initialize date
 
-        // Initialize inputImage from existing item data
         if let imageData = itemToEdit.imageData {
             _inputImage = State(initialValue: UIImage(data: imageData))
         }
-
-        // Ensure the item's category is valid, otherwise default
-        if !categories.contains(itemToEdit.category) && !categories.isEmpty {
-             _editableItem = State(initialValue: {
-                 var mutableItem = itemToEdit
-                 // Default to placeholder if invalid, or handle differently
-                 mutableItem.category = categories[0]
-                 return mutableItem
-             }())
-         }
+        // Ensure category is valid or set default
+        if !categories.contains(itemToEdit.category) || itemToEdit.category.isEmpty {
+             _editableItem.wrappedValue.category = categories[0] // Use wrappedValue to modify state struct
+        }
     }
 
-    // Add the same formatter as in AddItemView
     static let quantityFormatter: NumberFormatter = {
         let formatter = NumberFormatter()
         formatter.numberStyle = .decimal
@@ -49,59 +46,88 @@ struct EditItemView: View {
         return formatter
     }()
 
+    // Define estimated heights
+    private let collapsedHeight: CGFloat = 50 // Approx height for 2 lines
+    private let expandedHeight: CGFloat = 200 // Or adjust as needed
 
     var body: some View {
         NavigationView {
             Form {
-                // Group TextField and Button together
                 HStack {
-                    TextField("Item Name", text: $editableItem.name)
+                    TextField("Item Name", text: $editableItem.name) // Bind directly
                     Button {
-                        // Show the source picker dialog
                         self.showingSourcePicker = true
                     } label: {
                         Image(systemName: "camera.fill")
                     }
                 }
 
-                // Add the image preview section
-                if let inputImage = inputImage {
-                    Image(uiImage: inputImage)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(maxWidth: .infinity, maxHeight: 150) // Adjust size as needed
-                        .padding(.vertical) // Add some spacing
-                } else {
-                    // Optional: Show a placeholder if no image exists
-                    Rectangle()
-                        .fill(Color.secondary.opacity(0.1))
-                        .frame(maxWidth: .infinity, maxHeight: 150)
-                        .overlay(Text("No Image").foregroundColor(.secondary))
-                        .padding(.vertical)
+                // Description Section with Expand/Collapse using TextEditor
+                Section(header: Text("Description")) {
+                    // Use TextEditor instead of TextField
+                    TextEditor(text: $itemDescriptionString)
+                        .frame(height: isDescriptionExpanded ? expandedHeight : collapsedHeight)
+                        // Add some visual distinction if needed (optional)
+                        .border(Color(UIColor.systemGray5), width: 1)
+                        .cornerRadius(5)
+
+
+                    // Only show the button if the text *could* potentially exceed the collapsed height
+                    // (This check is imperfect but better than always showing it)
+                    if !itemDescriptionString.isEmpty {
+                        Button(isDescriptionExpanded ? "Show Less" : "Show More") {
+                            withAnimation {
+                                isDescriptionExpanded.toggle()
+                            }
+                        }
+                        .font(.caption)
+                        .foregroundColor(.blue)
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                    }
+                }
+
+
+                // Image Section
+                Section(header: Text("Image")) {
+                    if let currentImage = inputImage {
+                        Image(uiImage: currentImage)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(maxWidth: .infinity, maxHeight: 150)
+                            .padding(.vertical)
+                            .onTapGesture { // Allow tapping image to change it
+                                self.showingSourcePicker = true
+                            }
+                    } else {
+                        Button("Add Image") {
+                            self.showingSourcePicker = true
+                        }
+                    }
+                    // Button to remove image if it exists
+                    if inputImage != nil {
+                        Button("Remove Image", role: .destructive) {
+                            inputImage = nil
+                        }
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                    }
                 }
 
 
                 TextField("Quantity", text: $itemQuantityString)
                     .keyboardType(.numberPad)
-                    // Consider using the formatter directly if needed, or validate on save
-                    // TextField("Quantity", value: $itemQuantity, formatter: Self.quantityFormatter)
 
-                Picker("Category", selection: $editableItem.category) {
+                Picker("Category", selection: $editableItem.category) { // Bind directly
                     ForEach(categories, id: \.self) { category in
                         Text(category).tag(category)
                     }
                 }
-                .pickerStyle(.menu) // Explicitly set the style
+                .pickerStyle(.menu)
 
                 Toggle("Has Expiration Date?", isOn: $hasExpiration.animation())
 
                 if hasExpiration {
-                    DatePicker("Expiration Date", selection: Binding(
-                        get: { editableItem.expirationDate ?? Date() },
-                        set: { editableItem.expirationDate = $0 }
-                    ), displayedComponents: .date)
+                    DatePicker("Expiration Date", selection: $expirationDate, displayedComponents: .date) // Use separate date state
                 }
-                // No need for the else block with DispatchQueue here
             }
             .navigationTitle("Edit Item")
             .toolbar {
@@ -112,56 +138,40 @@ struct EditItemView: View {
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Save") {
-                        // Validate quantity string
                         guard let quantity = Int(itemQuantityString), quantity > 0 else {
                             print("Invalid quantity")
                             // Optionally show an alert to the user
                             return
                         }
 
+                        // Update the editableItem with the state values before saving
                         editableItem.quantity = quantity
-                        if !hasExpiration {
-                            editableItem.expirationDate = nil
-                        }
-
-                        // Convert the potentially updated UIImage back to Data
-                        editableItem.imageData = inputImage?.jpegData(compressionQuality: 0.8) // Adjust compression
+                        editableItem.description = itemDescriptionString.isEmpty ? nil : itemDescriptionString
+                        editableItem.expirationDate = hasExpiration ? expirationDate : nil
+                        editableItem.imageData = inputImage?.jpegData(compressionQuality: 0.8)
 
                         inventoryManager.updateItem(editableItem)
                         dismiss()
                     }
                     // Update disabled condition
-                    .disabled(editableItem.name.isEmpty || itemQuantityString.isEmpty || (Int(itemQuantityString) ?? 0) <= 0 || editableItem.category == categories[0])
+                    .disabled(editableItem.name.isEmpty || Int(itemQuantityString) == nil || Int(itemQuantityString) ?? 0 <= 0 || editableItem.category == categories[0])
                 }
             }
-            // Add the sheet modifier to present the ImagePicker
             .sheet(isPresented: $showingImagePicker) {
-                // Pass the selected sourceType to ImagePicker
                 ImagePicker(selectedImage: $inputImage, sourceType: self.sourceType)
             }
-            // Add the confirmation dialog
             .confirmationDialog("Choose Image Source", isPresented: $showingSourcePicker, titleVisibility: .visible) {
-                Button("Camera") {
-                    self.sourceType = .camera
-                    self.showingImagePicker = true
-                }
-                Button("Photo Library") {
-                    self.sourceType = .photoLibrary
-                    self.showingImagePicker = true
-                }
-            }
-            // Update the DatePicker binding if the toggle changes
-            .onChange(of: hasExpiration) { newValue in
-                 if newValue && editableItem.expirationDate == nil {
-                     editableItem.expirationDate = Date() // Set a default date if turning on
-                 } else if !newValue {
-                     editableItem.expirationDate = nil // Clear date if turning off
+                 Button("Camera") {
+                     self.sourceType = .camera
+                     self.showingImagePicker = true
+                 }
+                 Button("Photo Library") {
+                     self.sourceType = .photoLibrary
+                     self.showingImagePicker = true
                  }
             }
-            // Optional: Add onChange for inputImage if you need text recognition like in AddItemView
-            // .onChange(of: inputImage) { newImage in
-            //     recognizeText(from: newImage) // You'd need to add this function too
-            // }
+            // Optional: Add onChange for inputImage if you want to re-run text recognition during edit
+            // .onChange(of: inputImage) { newImage in /* Call recognizeText if needed */ }
         }
     }
 }

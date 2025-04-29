@@ -13,10 +13,10 @@ class InventoryManager: ObservableObject {
     }
 
     // Update addItem to accept imageData
-    func addItem(name: String, quantity: Int, expirationDate: Date?, category: String, imageData: Data? = nil) { // Add imageData parameter
-        let newItem = GroceryItem(name: name, quantity: quantity, expirationDate: expirationDate, category: category, imageData: imageData) // Pass imageData
+    // Ensure this function signature matches exactly
+    func addItem(name: String, quantity: Int, expirationDate: Date?, category: String, imageData: Data? = nil, description: String? = nil) {
+        let newItem = GroceryItem(name: name, quantity: quantity, expirationDate: expirationDate, category: category, imageData: imageData, description: description)
         inventory.append(newItem)
-        // saveInventory() is called by didSet
     }
 
     func removeItem(at offsets: IndexSet) {
