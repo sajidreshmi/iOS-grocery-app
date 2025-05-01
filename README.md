@@ -1,6 +1,3 @@
-<<<<<<< HEAD
-# iOS-grocery-app
-=======
 # iOS-grocery-app
 ## Description
 This is a grocery app that allows users to add items to their grocery list and mark them as purchased. The app is built using Swift and Xcode.
@@ -26,4 +23,3 @@ Contributions are welcome! Please open an issue or submit a pull request.
 1. Clone the repository
 2. Open the project in Xcode
 3. Run the project in the simulator or on a physical device
->>>>>>> 455c8dc (Added firebase datastore integration, loader, splash screen.)
