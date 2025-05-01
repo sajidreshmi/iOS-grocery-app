@@ -1,7 +1,8 @@
 import SwiftUI
 import VisionKit
 import Vision
-import Combine // Needed for ObservableObject
+import Combine
+import FirebaseStorage // Add this import
 
 // MARK: - ViewModel
 class AddItemViewModel: ObservableObject {
@@ -89,8 +90,14 @@ class AddItemViewModel: ObservableObject {
                 }
 
                 let recognizedStrings = observations.compactMap { $0.topCandidates(1).first?.string }
-                self.recognizedText = recognizedStrings.joined(separator: "\n")
-                print("Recognized: \(self.recognizedText)")
+                // Sort observations by their position instead of strings
+                let sortedObservations = observations.sorted {
+                    let box1 = $0.boundingBox
+                    let box2 = $1.boundingBox
+                    return box1.minY > box2.minY // Sort from top to bottom
+                }
+                let sortedStrings = sortedObservations.compactMap { $0.topCandidates(1).first?.string }
+                self.recognizedText = sortedStrings.joined(separator: "\n")
             }
         }
         request.recognitionLevel = .accurate // Or .fast
@@ -125,63 +132,59 @@ class AddItemViewModel: ObservableObject {
 
     // Inside class AddItemViewModel
     // MARK: - Add Item Logic
+    func uploadImageAndAddItem(image: UIImage) -> String? {
+        guard let imageData = image.jpegData(compressionQuality: 0.8) else { return nil }
+        return imageData.base64EncodedString()
+    }
+
     func addItem() {
         guard let quantity = Int(itemQuantityString), quantity > 0 else {
-            print("Invalid quantity")
-            showPopover(message: "Invalid quantity entered.", isError: true) // Show error popover
+            showPopover(message: "Invalid quantity entered.", isError: true)
             return
         }
 
         isLoading = true
 
-        let newItem = GroceryItem(
-            name: itemName,
-            quantity: quantity,
-            expirationDate: hasExpiration ? expirationDate : nil,
-            category: itemCategory,
-            imageURL: nil,
-            description: itemDescription.isEmpty ? nil : itemDescription
-        )
-
         Task {
-            var successResult: Bool = false // Temporary variable for clarity
-            do {
-                // This line calls the addItem function from your InventoryManager
-                successResult = await inventoryManager.addItem(
-                    name: newItem.name,
-                    quantity: newItem.quantity,
-                    expirationDate: newItem.expirationDate,
-                    category: newItem.category,
-                    imageURL: newItem.imageURL,
-                    description: newItem.description
-                )
-                print("AddItemViewModel received success: \(successResult)") // <-- Add this
+            var imageURL: String? = nil
+            var thumbnailData: String? = nil
+            
+            if let image = inputImage {
+                imageURL = await uploadImageToStorage(image: image)
+                thumbnailData = createThumbnailData(image: image)
+            }
+            
+            let newItem = GroceryItem(
+                name: itemName,
+                quantity: quantity,
+                expirationDate: hasExpiration ? expirationDate : nil,
+                category: itemCategory,
+                imageURL: imageURL,
+                thumbnailData: thumbnailData,
+                description: itemDescription.isEmpty ? nil : itemDescription
+            )
 
-                // --- Update UI on Main Thread ---
-                DispatchQueue.main.async { [weak self] in
-                    guard let self = self else { return }
-                    self.isLoading = false
-                    print("AddItemViewModel checking success on main thread: \(successResult)") // <-- Add this
-                    // This 'if' statement REQUIRES 'success' to be true or false (Bool)
-                    if successResult {
-                        self.showPopover(message: "Item added successfully!", isError: false)
-                        // Delay dismissal of the view slightly to allow user to see the popover
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                            self.dismissAction()
-                        }
-                    } else {
-                        // Handle failure case if addItem returns false
-                        self.showPopover(message: "Failed to add item. Please try again.", isError: true)
+            let successResult = await inventoryManager.addItem(
+                name: newItem.name,
+                quantity: newItem.quantity,
+                expirationDate: newItem.expirationDate,
+                category: newItem.category,
+                imageURL: newItem.imageURL,
+                thumbnailData: newItem.thumbnailData,
+                description: newItem.description
+            )
+
+            DispatchQueue.main.async { [weak self] in
+                guard let self = self else { return }
+                self.isLoading = false
+                
+                if successResult {
+                    self.showPopover(message: "Item added successfully!", isError: false)
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                        self.dismissAction()
                     }
-                }
-            } catch {
-                // --- Handle potential errors thrown by addItem ---
-                // This catch block might not be reached if InventoryManager handles its own errors
-                print("❌ Error caught in AddItemViewModel Task: \(error.localizedDescription)") // <-- Add this
-                DispatchQueue.main.async { [weak self] in
-                     guard let self = self else { return }
-                     self.isLoading = false
-                     self.showPopover(message: "Error: \(error.localizedDescription)", isError: true)
+                } else {
+                    self.showPopover(message: "Failed to add item. Please try again.", isError: true)
                 }
             }
         }
@@ -435,5 +438,37 @@ struct AddItemView_Previews: PreviewProvider {
     static var previews: some View {
         // Create a dummy InventoryManager for the preview
         AddItemView(inventoryManager: InventoryManager())
+    }
+}
+
+
+extension UIImage {
+    func resized(toWidth width: CGFloat) -> UIImage? {
+        let canvasSize = CGSize(width: width, height: CGFloat(ceil(width/size.width * size.height)))
+        UIGraphicsBeginImageContextWithOptions(canvasSize, false, scale)
+        defer { UIGraphicsEndImageContext() }
+        draw(in: CGRect(origin: .zero, size: canvasSize))
+        return UIGraphicsGetImageFromCurrentImageContext()
+    }
+}
+
+func createThumbnailData(image: UIImage) -> String? {
+    let thumbnailImage = image.resized(toWidth: 300) // Add resizing extension
+    return thumbnailImage?.jpegData(compressionQuality: 0.5)?.base64EncodedString()
+}
+
+func uploadImageToStorage(image: UIImage) async -> String? {
+    guard let imageData = image.jpegData(compressionQuality: 0.7) else { return nil }
+    
+    let storageRef = Storage.storage().reference()
+    let imageName = UUID().uuidString
+    let imageRef = storageRef.child("itemImages/\(imageName).jpg")
+    
+    do {
+        let _ = try await imageRef.putDataAsync(imageData)
+        return try await imageRef.downloadURL().absoluteString
+    } catch {
+        print("Error uploading image: \(error.localizedDescription)")
+        return nil
     }
 }

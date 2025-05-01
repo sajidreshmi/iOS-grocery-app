@@ -53,14 +53,14 @@ class InventoryManager: ObservableObject {
 
     // Add item to Firestore
     // Modify the function signature to be async and return Bool
-    func addItem(name: String, quantity: Int, expirationDate: Date?, category: String, imageURL: String? = nil, description: String? = nil) async -> Bool {
-        // Create a new GroceryItem (without ID initially)
+    func addItem(name: String, quantity: Int, expirationDate: Date?, category: String, imageURL: String? = nil, thumbnailData: String? = nil, description: String? = nil) async -> Bool {
         let newItem = GroceryItem(
             name: name,
             quantity: quantity,
             expirationDate: expirationDate,
             category: category,
-            imageURL: imageURL, // Use imageURL
+            imageURL: imageURL,
+            thumbnailData: thumbnailData,
             description: description
         )
 

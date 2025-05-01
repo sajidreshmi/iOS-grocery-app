@@ -1,34 +1,27 @@
 import SwiftUI
 
+private func singleLineDescription(_ description: String?) -> String? {
+    guard let desc = description else { return nil }
+    return desc
+        .replacingOccurrences(of: "\n", with: " ")
+        .trimmingCharacters(in: .whitespacesAndNewlines)
+}
+
 struct GroceryItemRow: View {
     let item: GroceryItem
-
-    // Move the helper function here or make it global/static if needed elsewhere
-    private func singleLineDescription(_ text: String?, maxLength: Int = 50) -> String? {
-        guard var text = text, !text.isEmpty else { return nil }
-        text = text.replacingOccurrences(of: "\n", with: " ")
-        if text.count > maxLength {
-            return String(text.prefix(maxLength)) + "..."
-        } else {
-            return text
-        }
-    }
-
+    
     var body: some View {
         HStack {
-            // Image display logic (using placeholder)
-            if item.imageURL != nil {
-                // Replace with your actual async image loading view (e.g., using AsyncImage)
-                // For now, keeping the placeholder:
-                Image(systemName: "photo")
+            if let thumbnailData = item.thumbnailData, 
+               let data = Data(base64Encoded: thumbnailData),
+               let uiImage = UIImage(data: data) {
+                Image(uiImage: uiImage)
                     .resizable()
                     .scaledToFill()
                     .frame(width: 50, height: 50)
                     .clipShape(RoundedRectangle(cornerRadius: 5))
                     .padding(.trailing, 5)
             }
-            // Removed the 'else if let imageData = item.imageData...' block as imageData no longer exists
-
             VStack(alignment: .leading) {
                 Text(item.name).font(.headline)
                 if let description = singleLineDescription(item.description) {

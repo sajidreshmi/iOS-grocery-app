@@ -1,4 +1,5 @@
 import SwiftUI
+import FirebaseStorage
 
 struct EditItemView: View {
     @ObservedObject var inventoryManager: InventoryManager
@@ -24,6 +25,7 @@ struct EditItemView: View {
 
     let categories = ["-- Select Category --", "Dairy", "Bakery", "Meat & Seafood", "Breakfast", "Frozen Foods", "Snacks", "Beverages","Spices & Cereals","Other"]
 
+    // In the init function, replace the inputImage initialization:
     init(inventoryManager: InventoryManager, itemToEdit: GroceryItem) {
         self.inventoryManager = inventoryManager
         _editableItem = State(initialValue: itemToEdit)
@@ -40,9 +42,15 @@ struct EditItemView: View {
         // TODO: Load image from itemToEdit.imageURL if it exists
         // This will require an asynchronous operation, potentially using .onAppear
         // For now, inputImage will start as nil unless loaded from URL later.
+        // Load thumbnail if available
+        if let thumbnailData = itemToEdit.thumbnailData,
+        let data = Data(base64Encoded: thumbnailData),
+        let image = UIImage(data: data) {
+        _inputImage = State(initialValue: image)
+        } else {
         _inputImage = State(initialValue: nil)
-
-
+        }
+    
         // Ensure category is valid or set default
         if !categories.contains(itemToEdit.category) || itemToEdit.category.isEmpty {
              _editableItem.wrappedValue.category = categories[0] // Use wrappedValue to modify state struct
@@ -63,7 +71,6 @@ struct EditItemView: View {
 
     var body: some View {
         NavigationView {
-            // Wrap Form in ZStack for overlay
             ZStack {
                 Form {
                     HStack {
@@ -108,16 +115,11 @@ struct EditItemView: View {
                                 .scaledToFit()
                                 .frame(maxWidth: .infinity, maxHeight: 150)
                                 .padding(.vertical)
-                                .onTapGesture { // Allow tapping image to change it
+                                .onTapGesture {
                                     self.showingSourcePicker = true
                                 }
-                        } else {
-                            Button("Add Image") {
-                                self.showingSourcePicker = true
-                            }
-                        }
-                        // Button to remove image if it exists
-                        if inputImage != nil {
+                            
+                            // Button to remove image if it exists
                             Button("Remove Image", role: .destructive) {
                                 inputImage = nil
                             }
@@ -160,29 +162,48 @@ struct EditItemView: View {
                             Task {
                                 guard let quantity = Int(itemQuantityString), quantity > 0 else {
                                     print("Invalid quantity")
-                                    // Optionally show an alert to the user
                                     return
                                 }
 
-                                // Start loading
                                 isLoading = true
+                                
+                                // Handle image upload if needed
+                                var newImageURL: String? = editableItem.imageURL
+                                var newThumbnailData: String? = editableItem.thumbnailData
+                                
+                                if let image = inputImage {
+                                    // Upload new image
+                                    do {
+                                        let storageRef = Storage.storage().reference()
+                                        let imageName = UUID().uuidString
+                                        let imageRef = storageRef.child("itemImages/\(imageName).jpg")
+                                        let imageData = image.jpegData(compressionQuality: 0.7)!
+                                        
+                                        // Upload full-size image
+                                        _ = try await imageRef.putDataAsync(imageData)
+                                        newImageURL = try await imageRef.downloadURL().absoluteString
+                                        
+                                        // Create thumbnail
+                                        if let thumbnail = image.resized(toWidth: 300) {
+                                            newThumbnailData = thumbnail.jpegData(compressionQuality: 0.5)?.base64EncodedString()
+                                        }
+                                    } catch {
+                                        print("Image upload failed: \(error.localizedDescription)")
+                                    }
+                                } else if inputImage == nil { // Explicit image removal
+                                    newImageURL = nil
+                                    newThumbnailData = nil
+                                }
 
-                                // Update the editableItem with the state values before saving
+                                // Update the item properties
                                 editableItem.quantity = quantity
                                 editableItem.description = itemDescriptionString.isEmpty ? nil : itemDescriptionString
                                 editableItem.expirationDate = hasExpiration ? expirationDate : nil
-
-                                // TODO: Handle image update/upload asynchronously here
-                                // This part needs to be async and awaited if image changed
-                                // Example placeholder:
-                                // if imageNeedsUpload {
-                                //    await uploadImageAndUpdateURL()
-                                // }
-
-                                // Assume updateItem is now async
-                                await inventoryManager.updateItem(editableItem) // Use await
-
-                                // Stop loading
+                                editableItem.imageURL = newImageURL
+                                editableItem.thumbnailData = newThumbnailData
+                                
+                                await inventoryManager.updateItem(editableItem)
+                                
                                 isLoading = false
                                 dismiss()
                             }
@@ -220,6 +241,22 @@ struct EditItemView: View {
                         .cornerRadius(10)
                 }
             } // End ZStack
-        }
+            .onAppear {
+                // Only load from URL if we don't have a local image
+                if inputImage == nil, let imageUrlString = editableItem.imageURL, let url = URL(string: imageUrlString) {
+                    Task {
+                        do {
+                            let (data, _) = try await URLSession.shared.data(from: url)
+                            if let image = UIImage(data: data) {
+                                inputImage = image
+                            }
+                        } catch {
+                            print("Error loading image: \(error.localizedDescription)")
+                            inputImage = UIImage(systemName: "photo.on.rectangle")
+                        }
+                    }
+                }
+            }
+        } // End NavigationView
     }
 }
