@@ -6,6 +6,14 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		028FA4382DC3BEE2002BB678 /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = 028FA4372DC3BEE2002BB678 /* FirebaseCore */; };
+		028FA43A2DC3BEF3002BB678 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 028FA4392DC3BEF3002BB678 /* FirebaseFirestore */; };
+		028FA43C2DC3BF0F002BB678 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 028FA43B2DC3BF0F002BB678 /* FirebaseAuth */; };
+		028FA43E2DC3BF15002BB678 /* FirebaseStorage in Frameworks */ = {isa = PBXBuildFile; productRef = 028FA43D2DC3BF15002BB678 /* FirebaseStorage */; };
+		028FA4612DC3FB98002BB678 /* .gitignore in Resources */ = {isa = PBXBuildFile; fileRef = 028FA4602DC3FB90002BB678 /* .gitignore */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		021351112DBEC5E10054460A /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -27,6 +35,7 @@
 		021350FE2DBEC5E10054460A /* GroceryApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = GroceryApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		021351102DBEC5E10054460A /* GroceryAppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = GroceryAppTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		0213511A2DBEC5E10054460A /* GroceryAppUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = GroceryAppUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		028FA4602DC3FB90002BB678 /* .gitignore */ = {isa = PBXFileReference; lastKnownFileType = text; path = .gitignore; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -52,6 +61,10 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				028FA4382DC3BEE2002BB678 /* FirebaseCore in Frameworks */,
+				028FA43E2DC3BF15002BB678 /* FirebaseStorage in Frameworks */,
+				028FA43C2DC3BF0F002BB678 /* FirebaseAuth in Frameworks */,
+				028FA43A2DC3BEF3002BB678 /* FirebaseFirestore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -75,9 +88,11 @@
 		021350F52DBEC5E10054460A = {
 			isa = PBXGroup;
 			children = (
+				028FA4602DC3FB90002BB678 /* .gitignore */,
 				021351002DBEC5E10054460A /* GroceryApp */,
 				021351132DBEC5E10054460A /* GroceryAppTests */,
 				0213511D2DBEC5E10054460A /* GroceryAppUITests */,
+				028FA4362DC3BEE2002BB678 /* Frameworks */,
 				021350FF2DBEC5E10054460A /* Products */,
 			);
 			sourceTree = "<group>";
@@ -90,6 +105,13 @@
 				0213511A2DBEC5E10054460A /* GroceryAppUITests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		028FA4362DC3BEE2002BB678 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -112,6 +134,10 @@
 			);
 			name = GroceryApp;
 			packageProductDependencies = (
+				028FA4372DC3BEE2002BB678 /* FirebaseCore */,
+				028FA4392DC3BEF3002BB678 /* FirebaseFirestore */,
+				028FA43B2DC3BF0F002BB678 /* FirebaseAuth */,
+				028FA43D2DC3BF15002BB678 /* FirebaseStorage */,
 			);
 			productName = GroceryApp;
 			productReference = 021350FE2DBEC5E10054460A /* GroceryApp.app */;
@@ -195,6 +221,9 @@
 			);
 			mainGroup = 021350F52DBEC5E10054460A;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				028FA4352DC2752A002BB678 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 021350FF2DBEC5E10054460A /* Products */;
 			projectDirPath = "";
@@ -212,6 +241,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				028FA4612DC3FB98002BB678 /* .gitignore in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -564,6 +594,40 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		028FA4352DC2752A002BB678 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 11.12.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		028FA4372DC3BEE2002BB678 /* FirebaseCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 028FA4352DC2752A002BB678 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseCore;
+		};
+		028FA4392DC3BEF3002BB678 /* FirebaseFirestore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 028FA4352DC2752A002BB678 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseFirestore;
+		};
+		028FA43B2DC3BF0F002BB678 /* FirebaseAuth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 028FA4352DC2752A002BB678 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAuth;
+		};
+		028FA43D2DC3BF15002BB678 /* FirebaseStorage */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 028FA4352DC2752A002BB678 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseStorage;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 021350F62DBEC5E10054460A /* Project object */;
 }
